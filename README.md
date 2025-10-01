@@ -3,7 +3,7 @@
 A privacy-first, full-stack web app that intelligently analyzes resumes using NLP and machine learning. Built with Django and designed for secure, local deployment—perfect for HR teams, recruiters, and internal hiring tools.
 
 🖼️ Screenshots
-![Weather App Screenshot](.resume_analyzer.jpg)  
+![Resume Analyzer](resume_analyzer.jpg)  
 
 ## 🚀 Features
 
