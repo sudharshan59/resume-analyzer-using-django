@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>NEO ATS ANALYZER</title>
+  <script src="https://unpkg.com/htmx.org@1.9.6"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --neon-purple: #e040fb;
+      --neon-teal: #00f5d4;
+      --neon-cyan: #0ff;
+      --neon-pink: #ff2e63;
+      --dark-bg: #0a0a12;
+      --card-bg: #12121a;
+      --border-glow: 0 0 15px rgba(224, 64, 251, 0.5);
+    }
+    body {
+      background: var(--dark-bg);
+      color: white;
+      font-family: 'Orbitron', monospace;
+      margin: 0;
+      padding: 20px;
+    }
+    .container { max-width: 1000px; margin: 0 auto; }
+    .card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: var(--border-glow);
+      border: 1px solid var(--neon-purple);
+    }
+    .header {
+      text-align: center;
+      color: var(--neon-teal);
+      text-shadow: 0 0 10px var(--neon-teal);
+      font-size: 1.5rem;
+      margin-bottom: 20px;
+    }
+    input, select, textarea, button {
+      background: #1a1a25;
+      border: 1px solid var(--neon-purple);
+      color: white;
+      padding: 10px;
+      border-radius: 6px;
+      font-family: 'Orbitron', monospace;
+      width: 100%;
+    }
+    button {
+      background: linear-gradient(90deg, var(--neon-purple), var(--neon-cyan));
+      color: black;
+      font-weight: bold;
+      cursor: pointer;
+      transition: box-shadow 0.3s;
+    }
+    button:hover {
+      box-shadow: 0 0 20px var(--neon-cyan);
+    }
+    .score-gauge {
+      width: 200px; height: 200px; margin: 20px auto;
+      position: relative;
+    }
+    .score-text {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 2.5rem;
+      font-weight: bold;
+      color: var(--neon-teal);
+      text-shadow: 0 0 10px var(--neon-teal);
+    }
+    .progress-bar {
+      height: 12px;
+      background: #333;
+      border-radius: 6px;
+      margin: 8px 0;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--neon-purple), var(--neon-cyan));
+      box-shadow: 0 0 10px var(--neon-cyan);
+    }
+    .section-title {
+      font-size: 1.1rem;
+      margin: 16px 0 8px;
+      color: var(--neon-teal);
+    }
+    .issue { 
+      background: rgba(255, 46, 99, 0.1); 
+      border-left: 3px solid var(--neon-pink);
+      padding: 10px;
+      margin: 8px 0;
+      border-radius: 0 6px 6px 0;
+      font-size: 0.95rem;
+    }
+    .fix { 
+      background: rgba(0, 245, 212, 0.1); 
+      border-left: 3px solid var(--neon-teal);
+      padding: 10px;
+      margin: 8px 0;
+      border-radius: 0 6px 6px 0;
+      font-size: 0.95rem;
+    }
+    .htmx-indicator { display: none; }
+    .htmx-request .htmx-indicator { display: inline-block; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 class="header">NEO ATS ANALYZER</h1>
+
+    <div class="card">
+      <form hx-post="{% url 'analyze' %}" hx-target="#result" hx-swap="innerHTML" hx-encoding="multipart/form-data">
+        <textarea name="text" placeholder="Paste resume text..."></textarea>
+        <input type="file" name="file" accept=".pdf,.docx,.txt">
+        <input type="text" name="role" list="roles" placeholder="Target Role (e.g., Software Engineer)">
+        <datalist id="roles">
+          {% for role in roles %}
+            <option value="{{ role.title }}">
+          {% endfor %}
+        </datalist>
+        <select name="company_id">
+          <option value="">Generic ATS</option>
+          {% for company in companies %}
+            <option value="{{ company.id }}">{{ company.name }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit">
+          <span class="htmx-indicator">⏳</span> SCAN RESUME
+        </button>
+      </form>
+    </div>
+
+    <div id="result"></div>
+  </div>
+
+  <script>
+    htmx.on("htmx:afterOnLoad", function(evt) {
+      const data = JSON.parse(evt.detail.xhr.response);
+      let html = `<div class="card"><div class="score-gauge">
+        <svg viewBox="0 0 200 200">
+          <circle cx="100" cy="100" r="90" fill="none" stroke="#333" stroke-width="12"/>
+          <circle cx="100" cy="100" r="90" fill="none" stroke="url(#grad)" stroke-width="12"
+                  stroke-dasharray="565" stroke-dashoffset="${565 - (565 * data.ats_score / 100)}"
+                  transform="rotate(-90 100 100)"/>
+          <defs><linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" style="stop-color:var(--neon-purple);"/>
+            <stop offset="100%" style="stop-color:var(--neon-cyan);"/>
+          </linearGradient></defs>
+        </svg>
+        <div class="score-text">${data.ats_score}%</div>
+      </div>`;
+
+      // === ATS COMPATIBILITY (Formatting) ===
+      html += `<div class="section-title">📄 ATS Compatibility (${data.feedback.formatting.score}%)</div>`;
+      if (data.feedback.formatting.issues.length > 0) {
+        data.feedback.formatting.issues.forEach(issue => {
+          html += `<div class="issue">⚠️ ${issue}</div>`;
+        });
+      } else {
+        html += `<div class="fix">✅ Clean structure with standard headings</div>`;
+      }
+      if (data.feedback.formatting.fixes.length > 0) {
+        data.feedback.formatting.fixes.forEach(fix => {
+          html += `<div class="fix">💡 ${fix}</div>`;
+        });
+      }
+
+      // === KEYWORD USE (Skills) ===
+      html += `<div class="section-title">🔑 Keyword Use (${data.feedback.skills.score}%)</div>`;
+      if (data.feedback.skills.missing.length > 0) {
+        html += `<div class="issue">❌ Missing keywords: ${data.feedback.skills.missing.slice(0, 5).join(', ')}</div>`;
+      } else {
+        html += `<div class="fix">✅ All required keywords detected</div>`;
+      }
+      if (data.feedback.skills.fixes.length > 0) {
+        data.feedback.skills.fixes.forEach(fix => {
+          html += `<div class="fix">💡 ${fix}</div>`;
+        });
+      }
+
+      // === CONTENT QUALITY (Action Verbs + Metrics) ===
+      html += `<div class="section-title">✨ Content Quality</div>`;
+      
+      // Action Verbs
+      if (data.feedback.action_verbs.weak.length > 0) {
+        html += `<div class="issue">⚠️ Weak phrases: ${data.feedback.action_verbs.weak.join(', ')}</div>`;
+        data.feedback.action_verbs.fixes.forEach(fix => {
+          html += `<div class="fix">🔧 ${fix}</div>`;
+        });
+      } else {
+        html += `<div class="fix">✅ Strong action verbs used</div>`;
+      }
+
+      // Metrics
+      if (!data.feedback.metrics.has_metrics) {
+        html += `<div class="issue">❌ No quantifiable achievements found</div>`;
+        data.feedback.metrics.fixes.forEach(fix => {
+          html += `<div class="fix">📈 ${fix}</div>`;
+        });
+      } else {
+        html += `<div class="fix">✅ Metrics included (e.g., "by 32%")</div>`;
+      }
+
+      html += "</div>";
+      document.getElementById('result').innerHTML = html;
+    });
+  </script>
+</body>
+</html>
