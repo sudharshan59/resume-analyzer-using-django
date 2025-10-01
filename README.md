@@ -2,7 +2,8 @@
 
 A privacy-first, full-stack web app that intelligently analyzes resumes using NLP and machine learning. Built with Django and designed for secure, local deployment—perfect for HR teams, recruiters, and internal hiring tools.
 
----
+🖼️ Screenshots
+![Weather App Screenshot](./screenshot-weather-app.png)  
 
 ## 🚀 Features
 
@@ -62,8 +63,7 @@ Upload a resume → NLP extracts skills → ML model scores fit → Admin dashbo
 
 📈 Add SHAP-based explainability for scoring
 
-🖼️ Screenshots
-Add screenshots of your dashboard, upload form, and results page here for visual impact.
+
 
 👤 Author
 Sudharshanmonith Modular ML builder | Privacy-first systems architect | Django dashboard designer Made with ❤️ by Sudharshan
